@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { supabase } from "./supabase";
+import { createClient } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
   Radar,
@@ -19,7 +19,12 @@ import {
   Zap,
 } from "lucide-react";
 
-// --- UPDATED PRODUCTION N8N WEBHOOK URL ---
+// --- SUPABASE CLIENT SETUP ---
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// --- PRODUCTION N8N WEBHOOK URL ---
 const N8N_WEBHOOK_URL = "https://startups.app.n8n.cloud/webhook/9010fe73-8718-4f04-98b0-578a4802acba";
 
 function normalizeLeads(raw) {
