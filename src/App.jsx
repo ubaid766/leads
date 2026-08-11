@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { supabase } from "./supabase";
 import {
   LayoutDashboard,
   Radar,
@@ -437,6 +438,19 @@ export default function LeadGenDashboard() {
   const [leads, setLeads] = useState([]);
   const [lastScan, setLastScan] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+
+  // Fetch leads from Supabase on load
+  useEffect(() => {
+    async function fetchLeads() {
+      const { data, error } = await supabase.from('leads').select('*');
+      if (error) {
+        console.error('Error fetching leads:', error);
+      } else if (data) {
+        setLeads(data);
+      }
+    }
+    fetchLeads();
+  }, []);
 
   const handleLeadsGenerated = useCallback((newLeads, scanMeta) => {
     setLeads((prev) => [...newLeads, ...prev]);
