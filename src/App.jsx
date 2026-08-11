@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
   Radar,
@@ -18,11 +17,6 @@ import {
   ShieldCheck,
   Zap,
 } from "lucide-react";
-
-// --- SUPABASE CLIENT SETUP ---
-const SUPABASE_URL = "YOUR_SUPABASE_URL";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // --- PRODUCTION N8N WEBHOOK URL ---
 const N8N_WEBHOOK_URL = "https://startups.app.n8n.cloud/webhook/9010fe73-8718-4f04-98b0-578a4802acba";
@@ -442,18 +436,6 @@ export default function LeadGenDashboard() {
   const [leads, setLeads] = useState([]);
   const [lastScan, setLastScan] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
-
-  useEffect(() => {
-    async function fetchLeads() {
-      const { data, error } = await supabase.from('leads').select('*');
-      if (error) {
-        console.error('Error fetching leads:', error);
-      } else if (data) {
-        setLeads(data);
-      }
-    }
-    fetchLeads();
-  }, []);
 
   const handleLeadsGenerated = useCallback((newLeads, scanMeta) => {
     setLeads((prev) => [...newLeads, ...prev]);
