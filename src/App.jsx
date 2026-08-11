@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 // --- HARDCODED BACKEND CONFIG ---
-const N8N_WEBHOOK_URL = "https://your-instance.app.n8n.cloud/webhook/your-production-id";
+const N8N_WEBHOOK_URL = "https://startups.app.n8n.cloud/form/9010fe73-8718-4f04-98b0-578a4802acba";
 
 function normalizeLeads(raw) {
   const list = Array.isArray(raw) ? raw : raw?.leads || raw?.data || [];
