@@ -14,14 +14,13 @@ import {
   CheckCircle2,
   Download,
   ExternalLink,
-  Trash2,
   CreditCard,
   ShieldCheck,
   Zap,
 } from "lucide-react";
 
-// --- HARDCODED BACKEND CONFIG ---
-const N8N_WEBHOOK_URL = "https://startups.app.n8n.cloud/form/9010fe73-8718-4f04-98b0-578a4802acba";
+// --- UPDATED PRODUCTION N8N WEBHOOK URL ---
+const N8N_WEBHOOK_URL = "https://startups.app.n8n.cloud/webhook/9010fe73-8718-4f04-98b0-578a4802acba";
 
 function normalizeLeads(raw) {
   const list = Array.isArray(raw) ? raw : raw?.leads || raw?.data || [];
@@ -160,7 +159,7 @@ function LeadsTable({ leads, emptyHint }) {
   );
 }
 
-function DashboardPage({ leads, lastScan, onNavigateToTool, isSubscribed }) {
+function DashboardPage({ leads, lastScan, isSubscribed }) {
   const uniqueCompanies = useMemo(() => new Set(leads.map((l) => l.company)).size, [leads]);
   const withEmail = leads.filter((l) => l.email).length;
 
@@ -439,7 +438,6 @@ export default function LeadGenDashboard() {
   const [lastScan, setLastScan] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  // Fetch leads from Supabase on load
   useEffect(() => {
     async function fetchLeads() {
       const { data, error } = await supabase.from('leads').select('*');
@@ -491,7 +489,6 @@ export default function LeadGenDashboard() {
             <DashboardPage
               leads={leads}
               lastScan={lastScan}
-              onNavigateToTool={() => setPage("leadgen")}
               isSubscribed={isSubscribed}
             />
           )}
