@@ -21,9 +21,19 @@ import {
   Lock,
   User as UserIcon,
 } from "lucide-react";
-import { supabase } from "./supabase";
 
-const N8N_WEBHOOK_URL = "/api/scrape";
+// Initialize Supabase Client directly with safe strings
+const supabaseUrl = 'https://djemekbqkqclulekrgf.supabase.co';
+const supabaseAnonKey = 'sb_publishable_d49cDVZ088Z7mcsO9iMDgA_lhFBKNIJ';
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
+
+// Update this with your actual external N8N webhook URL if needed
+const N8N_WEBHOOK_URL = "https://your-n8n-webhook-url.com/webhook/scrape";
 
 function normalizeLeads(raw) {
   const list = Array.isArray(raw) ? raw : raw?.leads || raw?.data || [];
@@ -219,7 +229,6 @@ function LeadGenPage({ onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState("idle");
-  const [errorMessage, setErrorMessage] = useState("");
   const [results, setResults] = useState([]);
 
   const canSubmit = isSubscribed && keyword.trim().length > 0 && location.trim().length > 0 && status !== "loading";
@@ -230,7 +239,6 @@ function LeadGenPage({ onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
       if (!canSubmit) return;
 
       setStatus("loading");
-      setErrorMessage("");
 
       try {
         const response = await fetch(N8N_WEBHOOK_URL, {
