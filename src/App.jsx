@@ -388,6 +388,23 @@ function LeadGenPage({ onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
 }
 
 function PricingPage({ isSubscribed, onSubscribe }) {
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvc, setCvc] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleCardPayment = (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    setTimeout(() => {
+      setLoading(false);
+      setIsCheckingOut(false);
+      onSubscribe();
+    }, 1500);
+  };
+
   return (
     <div className="max-w-2xl space-y-6">
       <div>
@@ -432,14 +449,90 @@ function PricingPage({ isSubscribed, onSubscribe }) {
               <CheckCircle2 size={18} />
               Your subscription is active and running!
             </div>
-          ) : (
+          ) : !isCheckingOut ? (
             <button
-              onClick={onSubscribe}
+              onClick={() => setIsCheckingOut(true)}
               className="w-full flex items-center justify-center gap-2 rounded-lg bg-teal-700 py-3 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
             >
               <CreditCard size={18} />
-              Subscribe with Stripe (Mock Checkout)
+              Pay with Card ($49/mo)
             </button>
+          ) : (
+            <form onSubmit={handleCardPayment} className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">Pay with card</span>
+                <div className="flex gap-1.5 text-[10px] font-bold text-slate-400">
+                  <span className="px-1.5 py-0.5 bg-white border border-slate-200 rounded">VISA</span>
+                  <span className="px-1.5 py-0.5 bg-white border border-slate-200 rounded">MC</span>
+                  <span className="px-1.5 py-0.5 bg-white border border-slate-200 rounded">AMEX</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Card Number</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    placeholder="4242 •••• •••• 4242"
+                    value={cardNumber}
+                    onChange={(e) => setCardNumber(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  />
+                  <CreditCard size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Expiration Date</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="MM/YY"
+                    value={expiry}
+                    onChange={(e) => setExpiry(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">CVC / CVV</label>
+                  <input
+                    type="password"
+                    required
+                    maxLength="4"
+                    placeholder="123"
+                    value={cvc}
+                    onChange={(e) => setCvc(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCheckingOut(false)}
+                  className="w-1/3 rounded-lg border border-slate-200 bg-white py-2 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-2/3 flex items-center justify-center gap-2 rounded-lg bg-teal-700 py-2 text-xs font-medium text-white hover:bg-teal-800 disabled:bg-slate-300"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Pay $49.00"
+                  )}
+                </button>
+              </div>
+            </form>
           )}
         </div>
       </div>
