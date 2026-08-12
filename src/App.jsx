@@ -24,10 +24,10 @@ function normalizeLeads(raw) {
   const list = Array.isArray(raw) ? raw : raw?.leads || raw?.data || [];
   return list.map((item, i) => ({
     id: item.id || `${Date.now()}-${i}`,
-    company: item.company_name || item.company || item.companyName || item.name || "Unnamed company",
+    company: item["Company Name"] || item.company_name || item.company || item.companyName || item.name || "Unnamed company",
     website: item.website || item.url || item.domain || "",
-    phone: item.phone || item.phone_number || item.phoneNumber || "",
-    email: item.email || item.contact_email || item.email_address || "",
+    phone: item["Manager Phone"] || item.phone || item.phone_number || item.phoneNumber || "",
+    email: item["Email"] || item.email || item.contact_email || item.email_address || "",
   }));
 }
 
