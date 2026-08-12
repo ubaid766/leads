@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { createClient } from '@supabase/supabase-js';
 import {
   LayoutDashboard,
   Radar,
@@ -16,7 +17,11 @@ import {
   CreditCard,
   ShieldCheck,
   Zap,
+  LogOut,
+  Lock,
+  User as UserIcon,
 } from "lucide-react";
+import { supabase } from "./supabase";
 
 const N8N_WEBHOOK_URL = "/api/scrape";
 
@@ -167,7 +172,7 @@ function DashboardPage({ leads, lastScan, isSubscribed }) {
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Dashboard</h1>
           <p className="mt-1 text-sm text-slate-500">
-            A live view of every lead your workflow has generated this session.
+            A live view of every lead securely stored in your account database.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -204,7 +209,7 @@ function DashboardPage({ leads, lastScan, isSubscribed }) {
 
       <LeadsTable
         leads={leads}
-        emptyHint="Head to the Lead Gen Tool to run your first search and results will show up here automatically."
+        emptyHint="Head to the Lead Gen Tool to run your first search and results will save here automatically."
       />
     </div>
   );
@@ -249,7 +254,6 @@ function LeadGenPage({ onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
         setStatus("success");
         onLeadsGenerated(leads, { keyword: keyword.trim(), location: location.trim() });
       } catch (err) {
-        // Fallback mock leads so the app works seamlessly even if webhook CORS blocks it
         const mockLeads = [
           {
             id: `${Date.now()}-1`,
@@ -357,16 +361,6 @@ function LeadGenPage({ onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
             )}
           </button>
         </div>
-
-        {status === "error" && (
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700">
-            <AlertCircle size={16} className="mt-0.5 shrink-0" />
-            <div>
-              <p className="font-medium">Couldn't reach the webhook</p>
-              <p className="mt-0.5 text-xs text-rose-600">{errorMessage}</p>
-            </div>
-          </div>
-        )}
 
         {status === "success" && (
           <div className="mt-4 flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2.5 text-sm text-teal-800">
@@ -540,16 +534,150 @@ function PricingPage({ isSubscribed, onSubscribe }) {
   );
 }
 
+function AuthScreen({ onLoginSuccess }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      if (isSignUp) {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        alert("Account created successfully! You can now log in.");
+        setIsSignUp(false);
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        onLoginSuccess(data.user);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen w-full items-center justify-center bg-slate-100 p-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-teal-700 text-white shadow-md">
+            <Radar size={24} />
+          </div>
+          <h1 className="text-xl font-bold text-slate-900">LeadScope Portal</h1>
+          <p className="mt-1 text-xs text-slate-500">Sign in to access your saved leads and campaigns</p>
+        </div>
+
+        {error && (
+          <div className="mb-4 rounded-lg bg-rose-50 p-3 text-xs text-rose-700 border border-rose-200 flex items-center gap-2">
+            <AlertCircle size={16} className="shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleAuth} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Email address</label>
+            <div className="relative">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@agency.com"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 pl-9 text-sm text-slate-800 outline-none focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-100"
+              />
+              <UserIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Password</label>
+            <div className="relative">
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 pl-9 text-sm text-slate-800 outline-none focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-100"
+              />
+              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-teal-700 py-3 text-sm font-medium text-white hover:bg-teal-800 transition-colors disabled:bg-slate-300"
+          >
+            {loading ? <Loader2 size={16} className="animate-spin" /> : (isSignUp ? "Create Account" : "Sign In")}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center text-xs text-slate-500">
+          {isSignUp ? "Already have an account?" : "Don't have an account yet?"}{" "}
+          <button
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="font-medium text-teal-700 hover:underline"
+          >
+            {isSignUp ? "Sign In" : "Sign Up"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LeadGenDashboard() {
+  const [user, setUser] = useState(null);
   const [page, setPage] = useState("dashboard");
   const [leads, setLeads] = useState([]);
   const [lastScan, setLastScan] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user || null);
+      setLoadingUser(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLeadsGenerated = useCallback((newLeads, scanMeta) => {
     setLeads((prev) => [...newLeads, ...prev]);
     setLastScan(scanMeta);
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
+  if (loadingUser) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-50">
+        <Loader2 size={32} className="animate-spin text-teal-700" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthScreen onLoginSuccess={(u) => setUser(u)} />;
+  }
 
   const navItems = [
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -558,7 +686,7 @@ export default function LeadGenDashboard() {
   ];
 
   return (
-    <div className="flex h-full min-h-[640px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 text-slate-900">
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900">
       <aside className="hidden w-56 shrink-0 flex-col border-r border-slate-200 bg-white p-4 sm:flex">
         <div className="mb-6 flex items-center gap-2 px-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-700">
@@ -577,6 +705,16 @@ export default function LeadGenDashboard() {
             />
           ))}
         </nav>
+        <div className="border-t border-slate-100 pt-4">
+          <div className="mb-2 px-2 text-[11px] font-medium text-slate-400 truncate">{user.email}</div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+          >
+            <LogOut size={15} />
+            Sign Out
+          </button>
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
