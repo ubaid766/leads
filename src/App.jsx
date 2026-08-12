@@ -22,16 +22,6 @@ import {
   User as UserIcon,
 } from "lucide-react";
 
-// Initialize Supabase Client directly with safe strings
-const supabaseUrl = 'https://djemekbqkqclulekrgf.supabase.co';
-const supabaseAnonKey = 'sb_publishable_d49cDVZ088Z7mcsO9iMDgA_lhFBKNIJ';
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
-
 // Update this with your actual external N8N webhook URL if needed
 const N8N_WEBHOOK_URL = "https://your-n8n-webhook-url.com/webhook/scrape";
 
