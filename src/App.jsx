@@ -18,7 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 
-const N8N_WEBHOOK_URL = "https://startups.app.n8n.cloud/webhook/9010fe73-8718-4f04-98b0-578a4802acba";
+const N8N_WEBHOOK_URL = "/api/scrape";
 
 function normalizeLeads(raw) {
   const list = Array.isArray(raw) ? raw : raw?.leads || raw?.data || [];
