@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './supabase';
 import {
   LayoutDashboard,
   Radar,
