@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch("https://startups.app.n8n.cloud/webhook/9010fe73-8718-4f04-98b0-578a4802acba", {
+    const response = await fetch("https://startups.app.n8n.cloud/webhook/scrape", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req.body),
