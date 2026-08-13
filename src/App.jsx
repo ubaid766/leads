@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 // Update this with your actual external N8N webhook URL if needed
-const N8N_WEBHOOK_URL = "https://your-n8n-webhook-url.com/webhook/scrape";
+const N8N_WEBHOOK_URL = "http://localhost:5678/webhook/scrape";
 
 function normalizeLeads(raw) {
   const list = Array.isArray(raw) ? raw : raw?.leads || raw?.data || [];
