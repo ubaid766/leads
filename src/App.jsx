@@ -162,7 +162,7 @@ function LeadsTable({ leads, emptyHint }) {
   );
 }
 
-function DashboardPage({ leads, lastScan, isSubscribed }) {
+function DashboardPage({ leads, lastScan, subscriptionStatus }) {
   const uniqueCompanies = useMemo(() => new Set(leads.map((l) => l.company)).size, [leads]);
   const withEmail = leads.filter((l) => l.email).length;
 
@@ -176,9 +176,9 @@ function DashboardPage({ leads, lastScan, isSubscribed }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${isSubscribed ? "bg-teal-50 text-teal-700 border border-teal-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${subscriptionStatus === 'pro' ? "bg-teal-50 text-teal-700 border border-teal-200" : subscriptionStatus === 'pending' ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-slate-100 text-slate-700 border border-slate-200"}`}>
             <Zap size={12} />
-            {isSubscribed ? "Pro Plan Active" : "Free Tier (No Sub)"}
+            {subscriptionStatus === 'pro' ? "Pro Plan Active" : subscriptionStatus === 'pending' ? "Request Pending Approval" : "Free Tier"}
           </span>
         </div>
       </div>
@@ -292,14 +292,14 @@ function LeadGenPage({ onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
             <AlertCircle size={20} className="text-amber-600 shrink-0" />
             <div>
               <p className="text-sm font-semibold">Subscription required</p>
-              <p className="text-xs text-amber-700">You need an active subscription plan to run automated lead generation searches.</p>
+              <p className="text-xs text-amber-700">You need an active Pro subscription to run automated lead generation searches.</p>
             </div>
           </div>
           <button
             onClick={onNavigateToPricing}
             className="rounded-lg bg-amber-600 px-3.5 py-2 text-xs font-medium text-white hover:bg-amber-700"
           >
-            Upgrade Now
+            Request Access
           </button>
         </div>
       )}
@@ -379,22 +379,27 @@ function LeadGenPage({ onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
   );
 }
 
-function PricingPage({ isSubscribed, onSubscribe }) {
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCvc] = useState("");
+function PricingPage({ user, subscriptionStatus, onRefreshStatus }) {
   const [loading, setLoading] = useState(false);
 
-  const handleCardPayment = (e) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    setTimeout(() => {
+  const handleRequestAccess = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ subscription_status: 'pending' })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      alert("Pro access request sent! Please complete your SadaPay payment and notify admin.");
+      onRefreshStatus();
+    } catch (err) {
+      console.error(err.message);
+      alert("Error sending request: " + err.message);
+    } finally {
       setLoading(false);
-      setIsCheckingOut(false);
-      onSubscribe();
-    }, 1500);
+    }
   };
 
   return (
@@ -418,7 +423,7 @@ function PricingPage({ isSubscribed, onSubscribe }) {
           <span className="text-3xl font-bold text-slate-900">$49</span>
           <span className="text-sm text-slate-500">/ month</span>
         </div>
-        <p className="mt-2 text-xs text-slate-500">Full access to run live keyword & location scrapes with automated email enrichment.</p>
+        <p className="mt-2 text-xs text-slate-500">Full access to run live keyword & location scrapes with automated email enrichment via SadaPay manual verification.</p>
 
         <ul className="mt-6 space-y-3 text-sm text-slate-700">
           <li className="flex items-center gap-2">
@@ -436,95 +441,34 @@ function PricingPage({ isSubscribed, onSubscribe }) {
         </ul>
 
         <div className="mt-8">
-          {isSubscribed ? (
+          {subscriptionStatus === 'pro' ? (
             <div className="flex items-center gap-2 text-sm font-medium text-teal-700 bg-teal-50 p-3 rounded-lg border border-teal-200">
               <CheckCircle2 size={18} />
-              Your subscription is active and running!
+              Your Pro subscription is active!
             </div>
-          ) : !isCheckingOut ? (
-            <button
-              onClick={() => setIsCheckingOut(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-teal-700 py-3 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
-            >
-              <CreditCard size={18} />
-              Pay with Card ($49/mo)
-            </button>
+          ) : subscriptionStatus === 'pending' ? (
+            <div className="flex items-center gap-2 text-sm font-medium text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
+              <AlertCircle size={18} />
+              Request pending admin approval (SadaPay payment verification).
+            </div>
           ) : (
-            <form onSubmit={handleCardPayment} className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">Pay with card</span>
-                <div className="flex gap-1.5 text-[10px] font-bold text-slate-400">
-                  <span className="px-1.5 py-0.5 bg-white border border-slate-200 rounded">VISA</span>
-                  <span className="px-1.5 py-0.5 bg-white border border-slate-200 rounded">MC</span>
-                  <span className="px-1.5 py-0.5 bg-white border border-slate-200 rounded">AMEX</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Card Number</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    placeholder="4242 •••• •••• 4242"
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                  />
-                  <CreditCard size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Expiration Date</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="MM/YY"
-                    value={expiry}
-                    onChange={(e) => setExpiry(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">CVC / CVV</label>
-                  <input
-                    type="password"
-                    required
-                    maxLength="4"
-                    placeholder="123"
-                    value={cvc}
-                    onChange={(e) => setCvc(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCheckingOut(false)}
-                  className="w-1/3 rounded-lg border border-slate-200 bg-white py-2 text-xs font-medium text-slate-600 hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-2/3 flex items-center justify-center gap-2 rounded-lg bg-teal-700 py-2 text-xs font-medium text-white hover:bg-teal-800 disabled:bg-slate-300"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    "Pay $49.00"
-                  )}
-                </button>
-              </div>
-            </form>
+            <button
+              onClick={handleRequestAccess}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-teal-700 py-3 text-sm font-medium text-white hover:bg-teal-800 transition-colors disabled:bg-slate-300"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Sending Request...
+                </>
+              ) : (
+                <>
+                  <CreditCard size={18} />
+                  Request Pro Access (SadaPay Verification)
+                </>
+              )}
+            </button>
           )}
         </div>
       </div>
@@ -548,6 +492,12 @@ function AuthScreen({ onLoginSuccess }) {
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
+        
+        // Create initial profile row
+        if (data.user) {
+          await supabase.from('profiles').insert([{ id: data.user.id, email: data.user.email, subscription_status: 'free' }]);
+        }
+
         alert("Account created successfully! You can now log in.");
         setIsSignUp(false);
       } else {
@@ -639,17 +589,40 @@ export default function LeadGenDashboard() {
   const [page, setPage] = useState("dashboard");
   const [leads, setLeads] = useState([]);
   const [lastScan, setLastScan] = useState(null);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState('free');
   const [loadingUser, setLoadingUser] = useState(true);
+
+  const fetchUserProfile = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('subscription_status')
+        .eq('id', userId)
+        .single();
+      
+      if (data) {
+        setSubscriptionStatus(data.subscription_status || 'free');
+      }
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user || null);
+      if (user) {
+        fetchUserProfile(user.id);
+      }
       setLoadingUser(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      if (currentUser) {
+        fetchUserProfile(currentUser.id);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -674,7 +647,7 @@ export default function LeadGenDashboard() {
   }
 
   if (!user) {
-    return <AuthScreen onLoginSuccess={(u) => setUser(u)} />;
+    return <AuthScreen onLoginSuccess={(u) => { setUser(u); fetchUserProfile(u.id); }} />;
   }
 
   const navItems = [
@@ -721,20 +694,21 @@ export default function LeadGenDashboard() {
             <DashboardPage
               leads={leads}
               lastScan={lastScan}
-              isSubscribed={isSubscribed}
+              subscriptionStatus={subscriptionStatus}
             />
           )}
           {page === "leadgen" && (
             <LeadGenPage
               onLeadsGenerated={handleLeadsGenerated}
-              isSubscribed={isSubscribed}
+              isSubscribed={subscriptionStatus === 'pro'}
               onNavigateToPricing={() => setPage("pricing")}
             />
           )}
           {page === "pricing" && (
             <PricingPage
-              isSubscribed={isSubscribed}
-              onSubscribe={() => setIsSubscribed(true)}
+              user={user}
+              subscriptionStatus={subscriptionStatus}
+              onRefreshStatus={() => fetchUserProfile(user.id)}
             />
           )}
         </main>
