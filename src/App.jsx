@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
 import {
   LayoutDashboard,
   Radar,
@@ -21,6 +21,17 @@ import {
   Lock,
   User as UserIcon,
 } from "lucide-react";
+
+const supabaseUrl = 'https://djemekbqkqglulekrgf.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqZW1la2Jxa3FnbHVsZWtyZ2YiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczOTgwMDY0NSwiZXhwIjoyMDU1Mzc2NjQ1fQ.eyJpc3MiOiJzdXBhYmFzZSIsInJvbefv';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    storage: window.localStorage,
+  },
+});
 
 // Update this with your actual external N8N webhook URL if needed
 const N8N_WEBHOOK_URL = "http://localhost:5678/webhook/scrape";
@@ -419,7 +430,7 @@ function PricingPage({ user, subscriptionStatus, onRefreshStatus }) {
           <Zap size={18} />
           Pro LeadGen Access
         </div>
-        <p className="mt-2 text-xs text-slate-500">Full access to run live keyword & location scrapes with automated email enrichment via SadaPay manual verification.</p>
+        <p className="mt-2 text-xs text-slate-500">Full access to run live keyword & location scrapes with automated email enrichment.</p>
 
         <ul className="mt-6 space-y-3 text-sm text-slate-700">
           <li className="flex items-center gap-2">
@@ -489,7 +500,6 @@ function AuthScreen({ onLoginSuccess }) {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         
-        // Create initial profile row
         if (data.user) {
           await supabase.from('profiles').insert([{ id: data.user.id, email: data.user.email, subscription_status: 'free' }]);
         }
@@ -590,7 +600,7 @@ export default function LeadGenDashboard() {
 
   const fetchUserProfile = async (userId) => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('subscription_status')
         .eq('id', userId)
@@ -604,11 +614,25 @@ export default function LeadGenDashboard() {
     }
   };
 
+  const fetchLeads = async (userId) => {
+    const { data, error } = await supabase
+      .from('Leads')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error fetching leads:', error);
+    } else {
+      setLeads(data || []);
+    }
+  };
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user || null);
       if (user) {
         fetchUserProfile(user.id);
+        fetchLeads(user.id);
       }
       setLoadingUser(false);
     });
@@ -618,6 +642,7 @@ export default function LeadGenDashboard() {
       setUser(currentUser);
       if (currentUser) {
         fetchUserProfile(currentUser.id);
+        fetchLeads(currentUser.id);
       }
     });
 
@@ -643,7 +668,7 @@ export default function LeadGenDashboard() {
   }
 
   if (!user) {
-    return <AuthScreen onLoginSuccess={(u) => { setUser(u); fetchUserProfile(u.id); }} />;
+    return <AuthScreen onLoginSuccess={(u) => { setUser(u); fetchUserProfile(u.id); fetchLeads(u.id); }} />;
   }
 
   const navItems = [
