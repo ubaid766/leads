@@ -392,7 +392,7 @@ function PricingPage({ user, subscriptionStatus, onRefreshStatus }) {
 
       if (error) throw error;
       
-      alert("Pro access request sent! Please complete your SadaPay payment and notify admin.");
+      alert("Pro access request sent! Please notify admin.");
       onRefreshStatus();
     } catch (err) {
       console.error(err.message);
@@ -418,10 +418,6 @@ function PricingPage({ user, subscriptionStatus, onRefreshStatus }) {
         <div className="flex items-center gap-2 text-teal-700 font-semibold text-sm">
           <Zap size={18} />
           Pro LeadGen Access
-        </div>
-        <div className="mt-3 flex items-baseline gap-1">
-          <span className="text-3xl font-bold text-slate-900">$49</span>
-          <span className="text-sm text-slate-500">/ month</span>
         </div>
         <p className="mt-2 text-xs text-slate-500">Full access to run live keyword & location scrapes with automated email enrichment via SadaPay manual verification.</p>
 
@@ -449,7 +445,7 @@ function PricingPage({ user, subscriptionStatus, onRefreshStatus }) {
           ) : subscriptionStatus === 'pending' ? (
             <div className="flex items-center gap-2 text-sm font-medium text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
               <AlertCircle size={18} />
-              Request pending admin approval (SadaPay payment verification).
+              Request pending admin approval.
             </div>
           ) : (
             <button
@@ -465,7 +461,7 @@ function PricingPage({ user, subscriptionStatus, onRefreshStatus }) {
               ) : (
                 <>
                   <CreditCard size={18} />
-                  Request Pro Access (SadaPay Verification)
+                  Request Pro Access
                 </>
               )}
             </button>
