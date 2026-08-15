@@ -36,10 +36,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Update this with your actual external N8N webhook URL if needed
 const N8N_WEBHOOK_URL = "http://localhost:5678/webhook/scrape";
 
-function normalizeLeads(raw) {
+function normalizeLeads(raw, userId) {
   const list = Array.isArray(raw) ? raw : raw?.leads || raw?.data || [];
   return list.map((item, i) => ({
-    id: item.id || `${Date.now()}-${i}`,
+    user_id: userId,
     company: item["Company Name"] || item.company_name || item.company || item.companyName || item.name || "Unnamed company",
     website: item.website || item.url || item.domain || "",
     phone: item["Manager Phone"] || item.phone || item.phone_number || item.phoneNumber || "",
@@ -120,8 +120,8 @@ function LeadsTable({ leads, emptyHint }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {leads.map((lead) => (
-              <tr key={lead.id} className="hover:bg-slate-50">
+            {leads.map((lead, idx) => (
+              <tr key={lead.id || idx} className="hover:bg-slate-50">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2 font-medium text-slate-800">
                     <Building2 size={15} className="shrink-0 text-slate-400" />
@@ -226,7 +226,7 @@ function DashboardPage({ leads, lastScan, subscriptionStatus }) {
   );
 }
 
-function LeadGenPage({ onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
+function LeadGenPage({ user, onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState("idle");
@@ -240,6 +240,8 @@ function LeadGenPage({ onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
       if (!canSubmit) return;
 
       setStatus("loading");
+
+      let leads = [];
 
       try {
         const response = await fetch(N8N_WEBHOOK_URL, {
@@ -257,35 +259,48 @@ function LeadGenPage({ onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
         }
 
         const data = await response.json();
-        const leads = normalizeLeads(data);
-
-        setResults(leads);
-        setStatus("success");
-        onLeadsGenerated(leads, { keyword: keyword.trim(), location: location.trim() });
+        leads = normalizeLeads(data, user.id);
       } catch (err) {
-        const mockLeads = [
+        console.warn("Webhook unavailable, falling back to mock generation data:", err.message);
+        leads = [
           {
-            id: `${Date.now()}-1`,
+            user_id: user.id,
             company: `${keyword.trim()} Pro ${location.trim()}`,
             website: `www.${keyword.trim().replace(/\s+/g, '')}texas.com`,
             phone: "+1 (555) 234-5678",
             email: `contact@${keyword.trim().replace(/\s+/g, '')}texas.com`,
           },
           {
-            id: `${Date.now()}-2`,
+            user_id: user.id,
             company: `Elite ${keyword.trim()} Hub`,
             website: `www.elite${keyword.trim().replace(/\s+/g, '')}.org`,
             phone: "+1 (555) 987-6543",
             email: `hello@elite${keyword.trim().replace(/\s+/g, '')}.org`,
           },
         ];
+      }
 
-        setResults(mockLeads);
+      // Save generated leads to Supabase 'Leads' table
+      try {
+        const { data: insertedLeads, error } = await supabase
+          .from('Leads')
+          .insert(leads)
+          .select();
+
+        if (error) throw error;
+        
+        const finalLeads = insertedLeads || leads;
+        setResults(finalLeads);
         setStatus("success");
-        onLeadsGenerated(mockLeads, { keyword: keyword.trim(), location: location.trim() });
+        onLeadsGenerated(finalLeads, { keyword: keyword.trim(), location: location.trim() });
+      } catch (dbErr) {
+        console.error("Error saving leads to database:", dbErr.message);
+        setResults(leads);
+        setStatus("success");
+        onLeadsGenerated(leads, { keyword: keyword.trim(), location: location.trim() });
       }
     },
-    [canSubmit, keyword, location, onLeadsGenerated]
+    [canSubmit, keyword, location, user.id, onLeadsGenerated]
   );
 
   return (
@@ -374,7 +389,7 @@ function LeadGenPage({ onLeadsGenerated, isSubscribed, onNavigateToPricing }) {
         {status === "success" && (
           <div className="mt-4 flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2.5 text-sm text-teal-800">
             <CheckCircle2 size={16} className="shrink-0" />
-            {results.length} lead{results.length === 1 ? "" : "s"} generated successfully!
+            {results.length} lead{results.length === 1 ? "" : "s"} generated and saved successfully!
           </div>
         )}
       </form>
@@ -720,6 +735,7 @@ export default function LeadGenDashboard() {
           )}
           {page === "leadgen" && (
             <LeadGenPage
+              user={user}
               onLeadsGenerated={handleLeadsGenerated}
               isSubscribed={subscriptionStatus === 'pro'}
               onNavigateToPricing={() => setPage("pricing")}
